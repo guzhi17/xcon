@@ -9,7 +9,7 @@ package main
 import (
 	"bytes"
 	"errors"
-	"../xcon"
+	"github.com/guzhi17/xcon"
 	"log"
 	"time"
 )
