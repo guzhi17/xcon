@@ -156,6 +156,7 @@ func (srv *Server) shuttingDown() bool {
 var ErrServerClosed = errors.New("xconn: Server closed")
 var ErrAbortHandler = errors.New("net/xconn: abort Handler")
 var ErrPackageTooLarge = errors.New("net/xconn: package too large")
+var ErrPackageModel = errors.New("net/xconn: package model failed")
 var ErrConnClosed = errors.New("xconn closed")
 var emptyStruct = struct{}{}
 func (srv *Server) ListenAndServe() error {

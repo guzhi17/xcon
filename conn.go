@@ -74,66 +74,78 @@ func (c *Conn) Close() error  {
 	return c.rwc.Close()
 }
 
+func GetTotalLen(bs... []byte)(total int, none int, single []byte){
+	for _, bi := range bs{
+		li := len(bi)
+		if li < 1{continue}
+		total += li
+		none += 1
+		single = bi
+	}
+	return
+}
+
+func (c *Conn) WriteRaw(b []byte) (n int, err error) {
+	c.wmu.Lock()
+	defer c.wmu.Unlock()
+	if d := c.Config.WriteTimeout; d != 0 {
+		c.rwc.SetWriteDeadline(time.Now().Add(d))
+	}
+	return c.rwc.Write(b)
+}
+
 func (c *Conn) Write(bs... []byte) (n int, err error) {
 	if c.closed.Load() != 0 {
 		return 0, ErrConnClosed
 	}
-	tl := 0
 	var pm = c.Config.PackageMode
 
-	var lenBuf []byte
+	//var lenBuf []byte
+	totalLen, noneCnt, single := GetTotalLen(bs...)
+	if totalLen < 1{
+		return 0, nil
+	}
+	var (
+		buffer *Buffer
+		pmLen int
+	)
 	switch pm {
+	default:
+		return 0, ErrPackageModel
 	case PmNone:
+		if noneCnt == 1{
+			return c.WriteRaw(single)
+		}
+		//go write directly
+		buffer = bufferPool.GetBuffer(totalLen)
 	case Pm16:
-		for _, bi := range bs{
-			tl += len(bi)
-		}
-		if tl < 1{
-			return 0, nil
-		}
-		if tl > 0x7fff{
+		if totalLen > 0x7fff{
 			return 0, ErrPackageTooLarge
 		}
-		lenBuf = []byte{0,0}
-		binary.BigEndian.PutUint16(lenBuf, uint16(tl))
+		pmLen = 2
+		buffer = bufferPool.GetBuffer(totalLen + pmLen)
+		binary.BigEndian.PutUint16(buffer.Data, uint16(totalLen))
 	case Pm32:
-		for _, bi := range bs{
-			tl += len(bi)
-		}
-		if tl < 1{
-			return 0, nil
-		}
-		if tl > 0x7fffffff{
+		if totalLen > 0x7fffffff{
 			return 0, ErrPackageTooLarge
 		}
-		lenBuf = []byte{0,0,0,0}
-		binary.BigEndian.PutUint32(lenBuf, uint32(tl))
+		pmLen = 4
+		buffer = bufferPool.GetBuffer(totalLen + pmLen)
+		binary.BigEndian.PutUint32(buffer.Data, uint32(totalLen))
 	}
-
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
-
-	if d := c.Config.WriteTimeout; d != 0 {
-		c.rwc.SetWriteDeadline(time.Now().Add(d))
-	}
-
-	if len(lenBuf)>0{
-		if hn, err := c.rwc.Write(lenBuf); err != nil || hn < int(pm){
-			return 0, err
+	defer buffer.Close()
+	switch noneCnt {
+	default:
+		for _, bi := range bs{
+			li := len(bi)
+			if li < 1{continue}
+			copy(buffer.Data[pmLen:], bi)
+			pmLen += li
 		}
+	case 1:
+		copy(buffer.Data[pmLen:], single)
 	}
-
-	for _, bi := range bs{
-		x, e := c.rwc.Write(bi)
-		if e != nil{
-			return n, e
-		}
-		if x < len(bi){
-			return n + x, nil
-		}
-		n += x
-	}
-	return
+	return c.WriteRaw(buffer.Data[:pmLen])
 }
 // Serve a new connection.
 func (c *Conn) serve(handler Handler, ctx context.Context) {
