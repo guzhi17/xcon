@@ -17,9 +17,8 @@ type Buffer struct {
 }
 
 func (s *Buffer)Close()  {
-	if s.Owner != nil && s.Data != nil{
+	if s.Owner != nil{
 		s.Owner.ReturnBuffer(s)
-		s.Owner = nil
 	}
 }
 
