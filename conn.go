@@ -68,6 +68,12 @@ func NewConn(rwc net.Conn, cfg ConnConfig) *Conn {
 func (c *Conn) TlsState() *tls.ConnectionState  {
 	return c.tlsState
 }
+func (c *Conn) RemoteAddr() string  {
+	return c.remoteAddr
+}
+func (c *Conn) Closed() bool  {
+	return c.closed.Load() > 0
+}
 
 func (c *Conn) Close() error  {
 	if c.closed.Inc() > 1{
