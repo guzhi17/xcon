@@ -65,6 +65,10 @@ func NewConn(rwc net.Conn, cfg ConnConfig) *Conn {
 	return c
 }
 
+func (c *Conn) TlsState() *tls.ConnectionState  {
+	return c.tlsState
+}
+
 func (c *Conn) Close() error  {
 	if c.closed.Inc() > 1{
 		return ErrConnClosed
@@ -73,6 +77,7 @@ func (c *Conn) Close() error  {
 	defer c.wmu.Unlock()
 	return c.rwc.Close()
 }
+
 
 func GetTotalLen(bs... []byte)(total int, none int, single []byte){
 	for _, bi := range bs{
