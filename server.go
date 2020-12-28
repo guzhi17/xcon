@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -160,6 +161,13 @@ var ErrPackageModel = errors.New("net/xconn: package model failed")
 var ErrConnClosed = errors.New("xconn closed")
 var emptyStruct = struct{}{}
 func (srv *Server) ListenAndServe() error {
+	if srv.Config.TLSConfig!=nil{
+		return srv.ListenAndServeTLS(srv.Config.TLSConfig.CertFile, srv.Config.TLSConfig.KeyFile)
+	}else{
+		return srv.ListenAndServeTcp()
+	}
+}
+func (srv *Server) ListenAndServeTcp() error {
 	if srv.shuttingDown() {
 		return ErrServerClosed
 	}
@@ -167,6 +175,7 @@ func (srv *Server) ListenAndServe() error {
 	if addr == "" {
 		addr = ":"
 	}
+	log.Println("Listen", addr)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -174,7 +183,6 @@ func (srv *Server) ListenAndServe() error {
 	defer ln.Close()
 	return srv.Serve(ln)
 }
-
 func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	if srv.shuttingDown() {
 		return ErrServerClosed
@@ -183,6 +191,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	if addr == "" {
 		addr = ":"
 	}
+	log.Println("Listen tls", addr)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
