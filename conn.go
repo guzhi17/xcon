@@ -155,6 +155,7 @@ func (c *Conn) Write(bs... []byte) (n int, err error) {
 		}
 	case 1:
 		copy(buffer.Data[pmLen:], single)
+		pmLen += totalLen
 	}
 	return c.WriteRaw(buffer.Data[:pmLen])
 }
