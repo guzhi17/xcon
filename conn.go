@@ -64,7 +64,9 @@ func NewConn(rwc net.Conn, cfg ConnConfig) *Conn {
 	}
 	return c
 }
-
+func (c *Conn) Conn() net.Conn  {
+	return c.rwc
+}
 func (c *Conn) TlsState() *tls.ConnectionState  {
 	return c.tlsState
 }
