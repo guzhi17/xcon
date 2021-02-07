@@ -11,6 +11,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"log"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -92,12 +93,25 @@ type Server struct {
 	onShutdown []func()
 }
 
+func MinInt(a, b int) int {
+	if a < b {return a}
+	return b
+}
+
 func CreateServer(c Config) *Server {
 	if c.BufferLength < 64{
 		c.BufferLength = 512
 	}
 	if c.PackageMaxLength < 1{
 		c.PackageMaxLength = c.BufferLength * 10
+	}
+
+	switch c.PackageMode {
+	case PmNone:
+	case Pm16:
+		c.PackageMaxLength = MinInt(c.PackageMaxLength, math.MaxInt16)
+	case Pm32:
+		c.PackageMaxLength = MinInt(c.PackageMaxLength, math.MaxInt32)
 	}
 	return &Server{
 		Config: c,

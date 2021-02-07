@@ -303,7 +303,7 @@ func (c *Conn)ReadRequest(buf ReusableBuffer, ctx context.Context) (data []byte,
 			return
 		}
 		lenData := binary.BigEndian.Uint16(lenBuf)
-		if int(lenData) > c.Config.PackageMaxLength{
+		if lenData > uint16(c.Config.PackageMaxLength){
 			return nil, ErrPackageTooLarge
 		}
 		data, err = ReadUtil(c.rwc, int(lenData), buf)
@@ -317,7 +317,7 @@ func (c *Conn)ReadRequest(buf ReusableBuffer, ctx context.Context) (data []byte,
 			return
 		}
 		lenData := binary.BigEndian.Uint32(lenBuf)
-		if int(lenData) > c.Config.PackageMaxLength{
+		if lenData > uint32(c.Config.PackageMaxLength){
 			return nil, ErrPackageTooLarge
 		}
 		data, err = ReadUtil(c.rwc, int(lenData), buf)
