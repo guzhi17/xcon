@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/binary"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -98,6 +99,7 @@ func GetTotalLen(bs... []byte)(total int, none int, single []byte){
 	return
 }
 
+
 func (c *Conn) WriteRaw(b []byte) (n int, err error) {
 	c.wmu.Lock()
 	defer c.wmu.Unlock()
@@ -105,6 +107,39 @@ func (c *Conn) WriteRaw(b []byte) (n int, err error) {
 		c.rwc.SetWriteDeadline(time.Now().Add(d))
 	}
 	return c.rwc.Write(b)
+}
+
+func (c *Conn) WriteRaw0(b []byte) (n int, err error) {
+	if c.tlsState != nil{
+		//for tls already get a lock for write
+		//see crypto/tls/conn.go->func (c *Conn) Write(b []byte) (int, error) {
+		if d := c.Config.WriteTimeout; d != 0 {
+			c.rwc.SetWriteDeadline(time.Now().Add(d))
+		}
+		return c.rwc.Write(b)
+	}else{
+		c.wmu.Lock()
+		defer c.wmu.Unlock()
+		if d := c.Config.WriteTimeout; d != 0 {
+			c.rwc.SetWriteDeadline(time.Now().Add(d))
+		}
+		return c.rwc.Write(b)
+	}
+}
+
+func (c *Conn) WriteRawV1(b io.Reader) (int, error) {
+	var (
+		n int64
+		err error
+	)
+	c.wmu.Lock()
+	defer c.wmu.Unlock()
+	if d := c.Config.WriteTimeout; d != 0 {
+		c.rwc.SetWriteDeadline(time.Now().Add(d))
+	}
+	n, err =  io.Copy(c.rwc, b)
+	//return c.rwc.Write(b)
+	return int(n), err
 }
 
 func (c *Conn) Write(bs... []byte) (n int, err error) {

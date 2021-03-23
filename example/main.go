@@ -20,7 +20,7 @@ func main() {
 		Handler:          &TelnetEchoManager{},
 		ConnConfig: xcon.ConnConfig{
 			PackageMaxLength: 1 << 10,
-			PackageMode:      0,
+			PackageMode:      xcon.PmNone, //Pm32,
 			BufferLength:     0,
 			DialTimeout:      0,
 			ReadTimeout:      time.Second*100,
@@ -56,7 +56,17 @@ var(
 )
 func (s *Session)OnData(b []byte)( err error){
 	log.Printf("[OnData]: %d-%s\n", len(b), b)
-	_, err = s.conn.Write(b)
+	_, err = s.conn.Write(b, b)
+	if err != nil{
+		return err
+	}
+	l := len(b)
+	_, err = s.conn.Write(b, b[:l/2])
+	if err != nil{
+		return err
+	}
+	time.Sleep(time.Second/2)
+	_, err = s.conn.Write(b[l/2:])
 	if err != nil{
 		return err
 	}

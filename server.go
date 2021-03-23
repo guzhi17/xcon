@@ -32,8 +32,9 @@ const (
 	Pm32 PackageMode = 4
 )
 
-
+type KeyPairLoader func(certFile, keyFile string) (tls.Certificate, error)
 type TLSConfig struct {
+	KeyPairLoader
 	CertFile, KeyFile string
 }
 
@@ -273,8 +274,12 @@ func (srv *Server) ServeTLS(l net.Listener, certFile, keyFile string) error {
 	configHasCert := len(config.Certificates) > 0 || config.GetCertificate != nil
 	if !configHasCert || certFile != "" || keyFile != "" {
 		var err error
+		loader := srv.Config.TLSConfig.KeyPairLoader
+		if loader == nil{
+			loader = tls.LoadX509KeyPair
+		}
 		config.Certificates = make([]tls.Certificate, 1)
-		config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+		config.Certificates[0], err = loader(certFile, keyFile)
 		if err != nil {
 			return err
 		}
